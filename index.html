@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议效果评估器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    <nav class="bg-violet-700 text-white p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-2">
+            <h1 class="text-xl font-bold"><i class="fa fa-group mr-2"></i>会议效果评估器</h1>
+            <div class="space-x-2 text-sm flex flex-wrap">
+                <button onclick="showTab('add')" class="tab-btn px-3 py-1 rounded bg-violet-500"><i class="fa fa-plus"></i> 录入会议</button>
+                <button onclick="showTab('history')" class="tab-btn px-3 py-1 rounded hover:bg-violet-500">历史记录</button>
+                <button onclick="showTab('templates')" class="tab-btn px-3 py-1 rounded hover:bg-violet-500"><i class="fa fa-file-text-o"></i> 会议模板</button>
+                <button onclick="showTab('tracking')" class="tab-btn px-3 py-1 rounded hover:bg-violet-500"><i class="fa fa-line-chart"></i> 改进追踪</button>
+                <button onclick="showTab('ranking')" class="tab-btn px-3 py-1 rounded hover:bg-violet-500"><i class="fa fa-trophy"></i> 团队排行</button>
+                <button onclick="showTab('knowledge')" class="tab-btn px-3 py-1 rounded hover:bg-violet-500"><i class="fa fa-book"></i> 改进知识库</button>
+            </div>
+        </div>
+    </nav>
+    <div class="max-w-6xl mx-auto p-4">
+        <!-- 录入会议Tab -->
+        <div id="tab-add" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold mb-4"><i class="fa fa-edit mr-2 text-violet-600"></i>录入会议信息</h3>
+                    <div class="space-y-3">
+                        <div><label class="block text-sm text-gray-600 mb-1">会议主题</label><input type="text" id="meetTitle" class="w-full border rounded p-2" placeholder="如：产品需求评审会"></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">会议模板</label>
+                            <select id="meetTemplate" onchange="applyTemplate()" class="w-full border rounded p-2">
+                                <option value="custom">自定义</option>
+                                <option value="weekly">周会/例会</option>
+                                <option value="review">项目评审</option>
+                                <option value="brainstorm">头脑风暴</option>
+                                <option value="oneone">一对一</option>
+                                <option value="decision">决策会议</option>
+                            </select>
+                        </div>
+                        <div><label class="block text-sm text-gray-600 mb-1">会议类型</label><select id="meetType" class="w-full border rounded p-2"><option value="review">项目评审</option><option value="brainstorm">头脑风暴</option><option value="weekly">周会/例会</option><option value="oneone">一对一</option><option value="decision">决策会议</option><option value="other">其他</option></select></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">团队/部门</label><input type="text" id="meetTeam" class="w-full border rounded p-2" placeholder="如：产品部"></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">参会人数</label><input type="number" id="meetPeople" class="w-full border rounded p-2" value="4" min="1"></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">时长 (分钟)</label><input type="number" id="meetDuration" class="w-full border rounded p-2" value="60" min="5"></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">预计节省时间 (分钟)</label><input type="number" id="meetSaved" class="w-full border rounded p-2" value="30" min="0"></div>
+
+                        <!-- 4维度评分 -->
+                        <div class="text-sm font-medium text-gray-700 mt-4 mb-2"><i class="fa fa-star mr-1 text-violet-600"></i>评分维度</div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-xs text-gray-500">决策产出 (1-5)</label>
+                                <div class="flex gap-1" id="scoreDecision">${[1,2,3,4,5].map(s => `<button onclick="setScore('decision', ${s})" class="s-btn-d s-btn-base" data-s="decision" data-v="${s}">${s}</button>`).join('')}</div>
+                            </div>
+                            <div><label class="block text-xs text-gray-500">时间利用 (1-5)</label>
+                                <div class="flex gap-1" id="scoreTime">${[1,2,3,4,5].map(s => `<button onclick="setScore('time', ${s})" class="s-btn-t s-btn-base" data-s="time" data-v="${s}">${s}</button>`).join('')}</div>
+                            </div>
+                            <div><label class="block text-xs text-gray-500">参与度 (1-5)</label>
+                                <div class="flex gap-1" id="scoreParticipation">${[1,2,3,4,5].map(s => `<button onclick="setScore('participation', ${s})" class="s-btn-p s-btn-base" data-s="participation" data-v="${s}">${s}</button>`).join('')}</div>
+                            </div>
+                            <div><label class="block text-xs text-gray-500">行动项明确度 (1-5)</label>
+                                <div class="flex gap-1" id="scoreAction">${[1,2,3,4,5].map(s => `<button onclick="setScore('action', ${s})" class="s-btn-a s-btn-base" data-s="action" data-v="${s}">${s}</button>`).join('')}</div>
+                            </div>
+                        </div>
+
+                        <!-- 会议总结 -->
+                        <div class="mt-4 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                            <h4 class="font-bold text-sm mb-2 text-violet-700"><i class="fa fa-file-text-o mr-1"></i>会议总结模板</h4>
+                            <div><label class="block text-xs text-gray-600 mb-1">决策项</label><textarea id="meetDecisions" rows="2" class="w-full border rounded p-1.5 text-sm" placeholder="本次会议做出的决策..."></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">行动项</label><textarea id="meetActions" rows="2" class="w-full border rounded p-1.5 text-sm" placeholder="需要执行的行动..."></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">待办人</label><input type="text" id="meetAssignees" class="w-full border rounded p-1.5 text-sm" placeholder="负责人（逗号分隔）"></div>
+                        </div>
+
+                        <div><label class="block text-sm text-gray-600 mb-1">会议日期</label><input type="date" id="meetDate" class="w-full border rounded p-2"></div>
+                        <div><label class="block text-sm text-gray-600 mb-1">备注</label><input type="text" id="meetNote" class="w-full border rounded p-2" placeholder="关键结论/待办事项..."></div>
+                    </div>
+                    <button onclick="evaluate()" class="w-full bg-violet-600 text-white py-3 mt-4 rounded-lg hover:bg-violet-700"><i class="fa fa-calculator mr-2"></i>评估并保存</button>
+                </div>
+                <div id="resultPanel" class="space-y-4">
+                    <div class="bg-white rounded-xl shadow p-6 text-center">
+                        <h3 class="font-bold mb-4"><i class="fa fa-star mr-2 text-violet-600"></i>综合评分</h3>
+                        <div id="totalScore" class="text-5xl font-bold text-violet-600 mb-2">-</div>
+                        <div id="scoreLabel" class="text-lg"></div>
+                        <div id="roiDisplay" class="mt-2 text-sm text-gray-500"></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="font-bold mb-3"><i class="fa fa-bar-chart mr-2 text-violet-600"></i>维度评分</h3>
+                        <div id="dimensionBars" class="space-y-2"></div>
+                    </div>
+                    <div id="suggestions" class="space-y-2"></div>
+                    <!-- 低效会议识别结果 -->
+                    <div id="lowEffDetection" class="hidden space-y-2"></div>
+                    <!-- 会议总结输出 -->
+                    <div id="meetingSummaryOutput" class="hidden space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 历史记录Tab -->
+        <div id="tab-history" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="font-bold"><i class="fa fa-history mr-2 text-violet-600"></i>会议历史记录</h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <select id="histFilter" onchange="renderHistory()" class="border rounded p-2 text-sm">
+                            <option value="all">全部类型</option>
+                            <option value="weekly">周会/例会</option>
+                            <option value="review">项目评审</option>
+                            <option value="brainstorm">头脑风暴</option>
+                            <option value="oneone">一对一</option>
+                            <option value="decision">决策会议</option>
+                        </select>
+                        <button onclick="exportMeetingSummary()" class="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"><i class="fa fa-download mr-1"></i>导出摘要</button>
+                        <button onclick="clearHistory()" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"><i class="fa fa-trash mr-1"></i>清空</button>
+                    </div>
+                </div>
+                <div id="historyList" class="space-y-3"></div>
+                <div class="mt-6">
+                    <h4 class="font-bold text-sm mb-3"><i class="fa fa-line-chart mr-1 text-violet-600"></i>评分趋势</h4>
+                    <div id="trendChart" style="height:200px"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模板Tab -->
+        <div id="tab-templates" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl shadow p-5"><div class="text-center mb-3"><i class="fa fa-calendar text-3xl text-blue-500"></i></div><h4 class="font-bold text-center">周会/例会</h4><p class="text-xs text-gray-500 mt-2">常规团队同步，检视进度</p><div class="text-xs text-gray-600 mt-2">- 建议时长：30-45分钟<br>- 参与度 ≥ 4<br>- 时间利用 ≥ 4</div><button onclick="loadTemplate('weekly')" class="w-full mt-3 bg-blue-500 text-white py-2 rounded text-sm hover:bg-blue-600">使用此模板</button></div>
+                <div class="bg-white rounded-xl shadow p-5"><div class="text-center mb-3"><i class="fa fa-search text-3xl text-green-500"></i></div><h4 class="font-bold text-center">项目评审</h4><p class="text-xs text-gray-500 mt-2">评审项目进展和交付物</p><div class="text-xs text-gray-600 mt-2">- 建议时长：60-90分钟<br>- 决策产出 ≥ 5<br>- 行动项 ≥ 4</div><button onclick="loadTemplate('review')" class="w-full mt-3 bg-green-500 text-white py-2 rounded text-sm hover:bg-green-600">使用此模板</button></div>
+                <div class="bg-white rounded-xl shadow p-5"><div class="text-center mb-3"><i class="fa fa-lightbulb-o text-3xl text-amber-500"></i></div><h4 class="font-bold text-center">头脑风暴</h4><p class="text-xs text-gray-500 mt-2">创意发散，激发新想法</p><div class="text-xs text-gray-600 mt-2">- 建议时长：30-60分钟<br>- 参与度 ≥ 5<br>- 时间利用 ≥ 3</div><button onclick="loadTemplate('brainstorm')" class="w-full mt-3 bg-amber-500 text-white py-2 rounded text-sm hover:bg-amber-600">使用此模板</button></div>
+                <div class="bg-white rounded-xl shadow p-5"><div class="text-center mb-3"><i class="fa fa-user text-3xl text-purple-500"></i></div><h4 class="font-bold text-center">一对一</h4><p class="text-xs text-gray-500 mt-2">管理者与成员定期交流</p><div class="text-xs text-gray-600 mt-2">- 建议时长：25-30分钟<br>- 参与度 ≥ 5<br>- 决策产出 ≥ 3</div><button onclick="loadTemplate('oneone')" class="w-full mt-3 bg-purple-500 text-white py-2 rounded text-sm hover:bg-purple-600">使用此模板</button></div>
+                <div class="bg-white rounded-xl shadow p-5"><div class="text-center mb-3"><i class="fa fa-gavel text-3xl text-red-500"></i></div><h4 class="font-bold text-center">决策会议</h4><p class="text-xs text-gray-500 mt-2">关键决策讨论和拍板</p><div class="text-xs text-gray-600 mt-2">- 建议时长：45-60分钟<br>- 决策产出 ≥ 5<br>- 行动项 ≥ 5</div><button onclick="loadTemplate('decision')" class="w-full mt-3 bg-red-500 text-white py-2 rounded text-sm hover:bg-red-600">使用此模板</button></div>
+            </div>
+        </div>
+
+        <!-- 改进追踪Tab -->
+        <div id="tab-tracking" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="font-bold mb-4"><i class="fa fa-line-chart mr-2 text-violet-600"></i>低效会议模式改进追踪</h3>
+                <div id="trackingContent" class="space-y-4"></div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold mb-3"><i class="fa fa-bar-chart mr-2 text-violet-600"></i>改进效果趋势</h3>
+                <div id="improvementChart" style="height:220px"></div>
+                <div id="improvementLegend" class="mt-3 text-sm text-gray-600 space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- 团队会议排行榜Tab -->
+        <div id="tab-ranking" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="font-bold mb-4"><i class="fa fa-trophy mr-2 text-violet-600"></i>团队会议效率排行榜</h3>
+                <p class="text-sm text-gray-500 mb-4">按团队/部门统计平均会议效率排名，帮助识别高效与低效团队</p>
+                <div id="rankingList" class="space-y-3"></div>
+                <div class="mt-6 p-4 bg-violet-50 rounded-lg">
+                    <h4 class="font-bold text-sm mb-2 text-violet-700">排行榜说明</h4>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        <p>- 综合效率 = (决策产出 × 0.25 + 时间利用 × 0.25 + 参与度 × 0.25 + 行动项 × 0.25) × 20</p>
+                        <p>- 效率指数 ≥ 70 为高效团队，55-70 为一般，< 55 为需改进</p>
+                        <p>- 会议数 ≥ 3 次才会计入排行榜</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold mb-3"><i class="fa fa-pie-chart mr-2 text-violet-600"></i>团队效率分布</h3>
+                <div id="teamDistributionChart" style="height:180px"></div>
+            </div>
+        </div>
+
+        <!-- 改进知识库Tab -->
+        <div id="tab-knowledge" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="font-bold mb-4"><i class="fa fa-book mr-2 text-violet-600"></i>会议效率改进知识库</h3>
+                <p class="text-sm text-gray-500 mb-4">针对各类低效问题的解决方案库，按问题类型分类整理</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="showKnowledgeCategory('all')" class="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm">全部方案</button>
+                    <button onclick="showKnowledgeCategory('decision')" class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200">决策产出不足</button>
+                    <button onclick="showKnowledgeCategory('time')" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm hover:bg-amber-200">时间利用率低</button>
+                    <button onclick="showKnowledgeCategory('participation')" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200">参与度不高</button>
+                    <button onclick="showKnowledgeCategory('action')" class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm hover:bg-purple-200">行动项不明确</button>
+                    <button onclick="showKnowledgeCategory('roi')" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">ROI为负</button>
+                </div>
+                <div id="knowledgeList" class="space-y-4"></div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold mb-3"><i class="fa fa-lightbulb-o mr-2 text-violet-600"></i>快速自查清单</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h4 class="font-medium text-green-700 mb-2">会前准备</h4>
+                        <ul class="space-y-1 text-gray-600">
+                            <li><i class="fa fa-check text-green-500 mr-1"></i>议程提前24小时发送</li>
+                            <li><i class="fa fa-check text-green-500 mr-1"></i>参会人员名单确认</li>
+                            <li><i class="fa fa-check text-green-500 mr-1"></i>材料/数据提前准备</li>
+                            <li><i class="fa fa-check text-green-500 mr-1"></i>明确会议目标和预期产出</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 class="font-medium text-blue-700 mb-2">会中执行</h4>
+                        <ul class="space-y-1 text-gray-600">
+                            <li><i class="fa fa-check text-blue-500 mr-1"></i>计时员控制每个议题时长</li>
+                            <li><i class="fa fa-check text-blue-500 mr-1"></i>确保每人有发言机会</li>
+                            <li><i class="fa fa-check text-blue-500 mr-1"></i>每个议题必须产出决策或待办</li>
+                            <li><i class="fa fa-check text-blue-500 mr-1"></i>记录关键讨论和反对意见</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <h4 class="font-medium text-purple-700 mb-2">会后跟进</h4>
+                        <ul class="space-y-1 text-gray-600">
+                            <li><i class="fa fa-check text-purple-500 mr-1"></i>24小时内发送会议纪要</li>
+                            <li><i class="fa fa-check text-purple-500 mr-1"></i>待办事项明确负责人和DDL</li>
+                            <li><i class="fa fa-check text-purple-500 mr-1"></i>重要决策同步给相关人员</li>
+                            <li><i class="fa fa-check text-purple-500 mr-1"></i>追踪待办完成进度</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                        <h4 class="font-medium text-amber-700 mb-2">效率技巧</h4>
+                        <ul class="space-y-1 text-gray-600">
+                            <li><i class="fa fa-check text-amber-500 mr-1"></i>站立会议控制在15分钟内</li>
+                            <li><i class="fa fa-check text-amber-500 mr-1"></i>超过8人考虑拆分会议</li>
+                            <li><i class="fa fa-check text-amber-500 mr-1"></i>非必要议题用异步沟通</li>
+                            <li><i class="fa fa-check text-amber-500 mr-1"></i>定期复盘会议效率</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEMPLATES = {
+            weekly: { type: 'weekly', title: '团队周会', team: '产品部', people: 8, duration: 30, saved: 20, scores: { decision: 3, time: 4, participation: 4, action: 4 } },
+            review: { type: 'review', title: '项目评审会', team: '研发部', people: 6, duration: 60, saved: 40, scores: { decision: 5, time: 4, participation: 3, action: 4 } },
+            brainstorm: { type: 'brainstorm', title: '创意脑暴会', team: '市场部', people: 5, duration: 45, saved: 15, scores: { decision: 2, time: 3, participation: 5, action: 3 } },
+            oneone: { type: 'oneone', title: '1对1沟通', team: '管理组', people: 2, duration: 30, saved: 10, scores: { decision: 3, time: 5, participation: 5, action: 4 } },
+            decision: { type: 'decision', title: '决策讨论会', team: '管理组', people: 5, duration: 60, saved: 50, scores: { decision: 5, time: 4, participation: 4, action: 5 } }
+        };
+
+        let meetings = JSON.parse(localStorage.getItem('meetings') || '[]');
+        let curScores = { decision: 3, time: 3, participation: 3, action: 3 };
+
+        function save() { localStorage.setItem('meetings', JSON.stringify(meetings)); }
+
+        function showTab(name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-3 py-1 rounded hover:bg-violet-500');
+            document.getElementById('tab-' + name).classList.remove('hidden');
+            if (name === 'history') renderHistory();
+            if (name === 'tracking') renderTracking();
+        }
+
+        function setScore(dim, val) {
+            curScores[dim] = val;
+            const colorMap = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500'];
+            document.querySelectorAll(`.s-btn-${dim[0]}`).forEach(btn => {
+                const v = parseInt(btn.dataset.v);
+                btn.className = `s-btn-${dim[0]} s-btn-base ${v <= val ? colorMap[val] + ' text-white' : 'bg-gray-200 text-gray-500'}`;
+            });
+        }
+
+        function applyTemplate() {
+            const tplKey = document.getElementById('meetTemplate').value;
+            if (tplKey === 'custom') return;
+            const tpl = TEMPLATES[tplKey];
+            if (!tpl) return;
+            document.getElementById('meetTitle').value = tpl.title;
+            document.getElementById('meetType').value = tpl.type;
+            document.getElementById('meetTeam').value = tpl.team || '';
+            document.getElementById('meetPeople').value = tpl.people;
+            document.getElementById('meetDuration').value = tpl.duration;
+            document.getElementById('meetSaved').value = tpl.saved;
+            Object.keys(tpl.scores).forEach(dim => setScore(dim, tpl.scores[dim]));
+        }
+
+        function evaluate() {
+            const title = document.getElementById('meetTitle').value.trim() || '未命名会议';
+            const type = document.getElementById('meetType').value;
+            const team = document.getElementById('meetTeam').value.trim() || '未指定';
+            const people = parseInt(document.getElementById('meetPeople').value) || 1;
+            const duration = parseInt(document.getElementById('meetDuration').value) || 60;
+            const saved = parseInt(document.getElementById('meetSaved').value) || 0;
+            const date = document.getElementById('meetDate').value || new Date().toISOString().slice(0, 10);
+            const note = document.getElementById('meetNote').value.trim();
+            const decisions = document.getElementById('meetDecisions').value.trim();
+            const actions = document.getElementById('meetActions').value.trim();
+            const assignees = document.getElementById('meetAssignees').value.trim();
+
+            // 4维度分数
+            const dimPct = {};
+            const dimNames = { decision: '决策产出', time: '时间利用', participation: '参与度', action: '行动项明确度' };
+            Object.keys(curScores).forEach(k => { dimPct[k] = (curScores[k] / 5) * 100; });
+
+            const totalScore = Math.round(Object.values(dimPct).reduce((s, v) => s + v, 0) / 4);
+            const level = totalScore >= 85 ? '优秀会议' : totalScore >= 70 ? '良好会议' : totalScore >= 55 ? '一般会议' : '低效会议';
+            const levelColors = { '优秀会议': 'text-green-600', '良好会议': 'text-blue-600', '一般会议': 'text-orange-600', '低效会议': 'text-red-600' };
+            const isLowEff = totalScore < 55;
+
+            // 低效会议检测
+            const detections = detectInefficientPatterns(type, team, people, duration, curScores, totalScore);
+
+            document.getElementById('totalScore').textContent = totalScore;
+            document.getElementById('scoreLabel').textContent = (isLowEff ? '! ' : '') + level;
+            document.getElementById('scoreLabel').className = 'text-lg font-bold ' + levelColors[level];
+
+            const roi = duration > 0 ? Math.round((saved - duration) / duration * 100) : 0;
+            const roiColor = roi >= 0 ? 'text-green-600' : 'text-red-600';
+            document.getElementById('roiDisplay').innerHTML = `
+                <span class="${roiColor} font-medium">ROI: ${roi >= 0 ? '+' : ''}${roi}%</span>
+                <span class="text-gray-400 ml-2">(节省${saved}min / 花费${duration}min)</span>
+                ${isLowEff ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">低效会议</span>' : ''}
+            `;
+
+            // CSS柱状图
+            const dimBars = document.getElementById('dimensionBars');
+            dimBars.innerHTML = Object.keys(curScores).map(k => {
+                const v = curScores[k]; const pct = (v / 5) * 100;
+                const barColor = v >= 4 ? 'bg-green-500' : v >= 3 ? 'bg-yellow-500' : 'bg-red-500';
+                return `<div class="flex items-center gap-2 text-sm"><span class="w-20 text-gray-600">${dimNames[k]}</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-3"><div class="${barColor} h-3 rounded-full" style="width:${pct}%"></div></div>
+                    <span class="w-6 text-right font-bold">${v}</span></div>`;
+            }).join('');
+
+            // 建议
+            const suggestions = document.getElementById('suggestions');
+            let tips = [];
+            if (curScores.decision < 3) tips.push({ icon: 'fa-check-circle', text: '决策产出不足。每个议题必须有明确决策或下一步计划，会议结束前回顾并分配任务。' });
+            if (curScores.time < 3) tips.push({ icon: 'fa-clock-o', text: `时间利用效率低。建议严格计时，每个议题控制在${people <= 3 ? 10 : 15}分钟内。` });
+            if (curScores.participation < 3) tips.push({ icon: 'fa-users', text: '参与度不高。尝试轮流发言、使用互动工具，确保每个人都被听到。' });
+            if (curScores.action < 3) tips.push({ icon: 'fa-tasks', text: '行动项不明确。每个讨论结果必须指定负责人和截止日期。' });
+            if (roi < 0) tips.push({ icon: 'fa-calculator', text: `会议ROI为负（${roi}%），建议重新评估会议必要性，考虑用异步沟通替代。` });
+            if (tips.length === 0) tips.push({ icon: 'fa-thumbs-up', text: '会议效果不错！继续保持这种高效的会议风格。' });
+            suggestions.innerHTML = tips.map(t => `<div class="flex items-start gap-3 p-3 bg-violet-50 rounded"><i class="fa ${t.icon} text-violet-600 mt-1"></i><div class="text-sm text-gray-700">${t.text}</div></div>`).join('');
+
+            // 低效会议检测结果
+            const detDiv = document.getElementById('lowEffDetection');
+            if (detections.length > 0) {
+                detDiv.classList.remove('hidden');
+                detDiv.innerHTML = `<div class="bg-red-50 rounded-xl shadow p-5"><h3 class="font-bold mb-3 text-red-700"><i class="fa fa-exclamation-triangle mr-1"></i>低效会议模式检测</h3>
+                    ${detections.map(d => `<div class="flex items-start gap-2 p-2 bg-white rounded mb-2 text-sm"><i class="fa fa-warning text-red-500 mt-0.5"></i><div><span class="font-medium text-red-700">${d.label}</span><br><span class="text-gray-600">${d.desc}</span></div></div>`).join('')}
+                    <div class="mt-3 p-3 bg-yellow-50 rounded text-sm"><span class="font-medium">改进建议：</span><br>${generateImprovementSuggestions(type, detections)}</div></div>`;
+            } else {
+                detDiv.classList.add('hidden');
+            }
+
+            // 会议总结输出
+            const summaryDiv = document.getElementById('meetingSummaryOutput');
+            summaryDiv.classList.remove('hidden');
+            summaryDiv.innerHTML = `<div class="bg-white rounded-xl shadow p-5">
+                <h3 class="font-bold mb-3 text-violet-700"><i class="fa fa-file-text-o mr-1"></i>会议摘要</h3>
+                <div class="text-sm space-y-2">
+                    <div><span class="font-medium">会议：</span>${title}</div>
+                    <div><span class="font-medium">类型：</span>${type} | <span class="font-medium">团队：</span>${team} | <span class="font-medium">评分：</span>${totalScore}/100</div>
+                    ${decisions ? `<div><span class="font-medium">决策项：</span>${decisions}</div>` : ''}
+                    ${actions ? `<div><span class="font-medium">行动项：</span>${actions}</div>` : ''}
+                    ${assignees ? `<div><span class="font-medium">待办人：</span>${assignees}</div>` : ''}
+                    ${note ? `<div><span class="font-medium">备注：</span>${note}</div>` : ''}
+                </div></div>`;
+
+            // 保存（含低效检测结果和会议总结）
+            meetings.unshift({ id: Date.now(), title, type, team, people, duration, saved, date, note, decisions, actions, assignees, scores: { ...curScores }, totalScore, roi, isLowEff, detections });
+            if (meetings.length > 200) meetings = meetings.slice(0, 200);
+            save();
+            if (detections.length > 0) showToast(`检测到 ${detections.length} 个低效模式`);
+        }
+
+        // --- 低效会议检测 ---
+        function detectInefficientPatterns(type, team, people, duration, scores, totalScore) {
+            const detections = [];
+
+            // 规则1：连续3次会议评分<3（在历史中检测）
+            const sameType = meetings.filter(m => m.type === type).slice(0, 2);
+            if (sameType.length >= 2 && sameType.every(m => m.totalScore < 55) && totalScore < 55) {
+                detections.push({ label: '低效会议系列', desc: `连续${sameType.length + 1}次"${type}"会议评分低于55分，建议重新设计会议流程。` });
+            }
+
+            // 规则2：同一团队/主题的会议平均分<3.5
+            const sameTeam = meetings.filter(m => m.team === team);
+            if (sameTeam.length >= 2) {
+                const avg = (sameTeam.reduce((s, m) => s + m.totalScore, 0) + totalScore) / (sameTeam.length + 1);
+                if (avg < 55) {
+                    detections.push({ label: '该类型/团队会议普遍低效', desc: `"${team}"团队的会议平均分${avg.toFixed(0)}/100，低于55分阈值，建议对该团队进行会议技能培训。` });
+                }
+            }
+
+            // 规则3：参与人数>10且决策产出<3
+            if (people > 10 && scores.decision < 3) {
+                detections.push({ label: '参会人数过多', desc: `参会${people}人但决策产出仅${scores.decision}/5分。超过10人的会议决策效率显著下降，建议控制在8人以内。` });
+            }
+
+            // 规则4：时间利用率<3且时长>60分钟
+            if (scores.time < 3 && duration > 60) {
+                detections.push({ label: '会议时间过长', desc: `会议时长${duration}分钟但时间利用率仅${scores.time}/5分。建议将会议控制在60分钟内，或拆分议题为多个短会。` });
+            }
+
+            return detections;
+        }
+
+        function generateImprovementSuggestions(type, detections) {
+            const suggestions = {
+                '低效会议系列': '建议：改用异步沟通（文档/消息），只保留必要的同步会议。每次会议前发送议程，会后24小时内发送纪要。',
+                '该类型/会议普遍低效': '建议：开展会议效率培训，引入会议计时员角色，使用"站立会议"格式缩短时间。',
+                '参会人数过多': '建议：精简参会人员，只邀请决策者和关键贡献者。其他人员以阅读会议纪要方式同步信息。',
+                '会议时间过长': '建议：设定严格的时间盒（Time Box），每个议题不超过15分钟。使用番茄工作法，每25分钟休息5分钟。'
+            };
+            return detections.map(d => suggestions[d.label] || '检查会议流程，确保议程明确、时间可控。').join('<br>');
+        }
+
+        // --- 改进追踪 ---
+        function renderTracking() {
+            const content = document.getElementById('trackingContent');
+            const types = [...new Set(meetings.map(m => m.type))];
+            if (types.length === 0) {
+                content.innerHTML = '<div class="text-center text-gray-400 py-8">暂无会议数据，录入会议后自动追踪改进效果</div>';
+                document.getElementById('improvementChart').innerHTML = '<div class="text-center text-gray-400 py-10">暂无数据</div>';
+                document.getElementById('improvementLegend').innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            types.forEach(type => {
+                const typeMeetings = meetings.filter(m => m.type === type);
+                const recent = typeMeetings.slice(0, 3);
+                const avg = typeMeetings.reduce((s, m) => s + m.totalScore, 0) / typeMeetings.length;
+                const lowEffCount = typeMeetings.filter(m => m.isLowEff).length;
+                const status = avg >= 70 ? '良好' : avg >= 55 ? '一般' : '需改进';
+                const color = avg >= 70 ? 'text-green-600' : avg >= 55 ? 'text-orange-600' : 'text-red-600';
+                const trend = recent.length >= 2 ? (recent[0].totalScore - recent[recent.length - 1].totalScore) : 0;
+
+                html += `<div class="p-4 bg-gray-50 rounded-lg border-l-4 ${avg >= 70 ? 'border-green-500' : avg >= 55 ? 'border-yellow-500' : 'border-red-500'}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div><h4 class="font-bold">${type}</h4><p class="text-xs text-gray-500">${typeMeetings.length}次会议 | 低效${lowEffCount}次</p></div>
+                        <div class="text-right"><span class="text-2xl font-bold ${color}">${avg.toFixed(0)}</span><span class="text-xs text-gray-500">/100</span></div>
+                    </div>
+                    <div class="flex gap-4 text-sm">
+                        <span class="${trend >= 0 ? 'text-green-600' : 'text-red-600'}"><i class="fa ${trend >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> 最近趋势${trend >= 0 ? '+' : ''}${trend.toFixed(0)}分</span>
+                        <span class="text-gray-500">状态：<span class="font-medium ${color}">${status}</span></span>
+                    </div>
+                    ${avg < 55 ? `<div class="mt-2 text-sm text-gray-600 bg-yellow-50 p-2 rounded">改进建议：${getTypeSuggestion(type)}</div>` : ''}
+                </div>`;
+            });
+            content.innerHTML = html;
+
+            // 改进效果趋势图（CSS折线图）
+            renderImprovementChart();
+        }
+
+        function getTypeSuggestion(type) {
+            const tips = {
+                'weekly': '缩短时长至30分钟，使用站立会议格式，提前发送议程。',
+                'review': '会前确保材料已分发阅读，会上只讨论决策和问题。',
+                'brainstorm': '设定明确议题，使用时间盒控制发散时间。',
+                'oneone': '建立固定频率和模板，避免变成随意聊天。',
+                'decision': '提前发送决策材料，会前收集意见，会上只做表决。'
+            };
+            return tips[type] || '重新设计会议流程，确保每次会议都有明确目标。';
+        }
+
+        function renderImprovementChart() {
+            const chart = document.getElementById('improvementChart');
+            const sorted = meetings.slice().reverse();
+            if (sorted.length < 2) {
+                chart.innerHTML = '<div class="text-center text-gray-400 py-10">需2条以上记录显示改进趋势</div>';
+                document.getElementById('improvementLegend').innerHTML = '';
+                return;
+            }
+
+            const vals = sorted.slice(-20).map(m => m.totalScore);
+            const maxVal = 100; const w = 700, h = 200, pad = 40;
+            const items = sorted.slice(-20);
+
+            let path = '';
+            const points = [];
+            vals.forEach((v, i) => {
+                const x = pad + (i / (vals.length - 1)) * (w - 2 * pad);
+                const y = h - pad - (v / maxVal) * (h - 2 * pad);
+                points.push({ x, y, val: v, item: items[i] });
+                path += (i === 0 ? 'M' : 'L') + x.toFixed(0) + ',' + y.toFixed(0);
+            });
+
+            // 低效阈值线（55分）
+            const thresholdY = h - pad - (55 / maxVal) * (h - 2 * pad);
+
+            chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" class="w-full h-full">
+                <line x1="${pad}" y1="${thresholdY}" x2="${w - pad}" y2="${thresholdY}" stroke="#ef4444" stroke-width="1" stroke-dasharray="5,5"/>
+                <text x="${w - pad - 5}" y="${thresholdY - 5}" text-anchor="end" fill="#ef4444" font-size="10">低效阈值(55)</text>
+                <polyline points="${path.slice(1).split('L').join(' ')}" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+                ${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${p.val >= 55 ? '#8b5cf6' : '#ef4444'}"/>
+                    <text x="${p.x}" y="${p.y - 8}" text-anchor="middle" fill="#8b5cf6" font-size="9">${p.val}</text>`).join('')}
+            </svg>`;
+
+            const legend = document.getElementById('improvementLegend');
+            const before = sorted.slice(0, Math.ceil(sorted.length / 2));
+            const after = sorted.slice(-Math.ceil(sorted.length / 2));
+            const avgBefore = before.reduce((s, m) => s + m.totalScore, 0) / before.length;
+            const avgAfter = after.reduce((s, m) => s + m.totalScore, 0) / after.length;
+            const change = avgAfter - avgBefore;
+
+            legend.innerHTML = `
+                <p>前半段平均：<span class="font-medium">${avgBefore.toFixed(0)}</span> 分 | 后半段平均：<span class="font-medium">${avgAfter.toFixed(0)}</span> 分
+                <span class="${change >= 0 ? 'text-green-600' : 'text-red-600'}">(${change >= 0 ? '+' : ''}${change.toFixed(0)} 分变化)</span></p>
+                <p>低效会议占比：<span class="font-medium">${(sorted.filter(m => m.isLowEff).length / sorted.length * 100).toFixed(0)}%</span></p>
+            `;
+        }
+
+        // --- 会议历史 ---
+        function renderHistory() {
+            const filter = document.getElementById('histFilter').value;
+            let filtered = filter === 'all' ? meetings : meetings.filter(m => m.type === filter);
+            const list = document.getElementById('historyList');
+
+            list.innerHTML = filtered.length === 0 ? '<div class="text-gray-400 text-center py-8">暂无会议记录</div>' :
+                filtered.slice(0, 30).map(m => {
+                    const level = m.totalScore >= 85 ? '优秀' : m.totalScore >= 70 ? '良好' : m.totalScore >= 55 ? '一般' : '低效';
+                    const color = m.totalScore >= 85 ? 'text-green-600' : m.totalScore >= 70 ? 'text-blue-600' : m.totalScore >= 55 ? 'text-orange-600' : 'text-red-600';
+                    const typeLabels = { weekly: '周会', review: '评审', brainstorm: '脑暴', oneone: '1对1', decision: '决策', other: '其他' };
+                    return `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded hover:bg-gray-100">
+                        <div class="flex-1"><div class="font-medium flex items-center gap-2">${m.title} <span class="text-xs text-gray-500">(${typeLabels[m.type]||m.type})</span>
+                            ${m.isLowEff ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">低效</span>' : ''}
+                            ${m.detections && m.detections.length > 0 ? '<span class="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">' + m.detections.length + '个问题</span>' : ''}</div>
+                        <div class="text-xs text-gray-500">${m.date} | ${m.team||'未指定'} | ${m.duration}min | ${m.people}人 | ROI ${m.roi}% ${m.note ? '| ' + m.note : ''}</div>
+                        ${m.decisions ? `<div class="text-xs text-violet-600 mt-1"><i class="fa fa-check-circle mr-1"></i>决策：${m.decisions}</div>` : ''}
+                        ${m.actions ? `<div class="text-xs text-blue-600"><i class="fa fa-tasks mr-1"></i>行动：${m.actions} ${m.assignees ? '(' + m.assignees + ')' : ''}</div>` : ''}</div>
+                        <div class="text-center"><div class="text-2xl font-bold ${color}">${m.totalScore}</div><div class="text-xs text-gray-500">${level}</div></div>
+                        <button onclick="deleteMeeting(${m.id})" class="text-red-400 hover:text-red-600"><i class="fa fa-trash"></i></button>
+                    </div>`;
+                }).join('');
+
+            // CSS折线趋势图
+            const trends = meetings.slice(0).reverse().slice(-15);
+            if (trends.length > 1) {
+                const vals = trends.map(m => m.totalScore);
+                const maxVal = 100; const w = 700, h = 180, pad = 30;
+                let path = '';
+                vals.forEach((v, i) => {
+                    const x = pad + (i / (vals.length - 1)) * (w - 2 * pad);
+                    const y = h - pad - (v / maxVal) * (h - 2 * pad);
+                    path += (i === 0 ? 'M' : 'L') + x.toFixed(0) + ',' + y.toFixed(0);
+                });
+                document.getElementById('trendChart').innerHTML = `<svg viewBox="0 0 ${w} ${h}" class="w-full h-full">
+                    <polyline points="${path.slice(1).split('L').join(' ')}" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+                    ${vals.map((v, i) => { const x = pad + (i / (vals.length - 1)) * (w - 2 * pad); const y = h - pad - (v / maxVal) * (h - 2 * pad); return `<circle cx="${x}" cy="${y}" r="4" fill="#8b5cf6"/><text x="${x}" y="${y - 8}" text-anchor="middle" fill="#8b5cf6" font-size="9">${v}</text>`; }).join('')}
+                </svg>`;
+            } else {
+                document.getElementById('trendChart').innerHTML = '<div class="text-center text-gray-400 py-10">需2条以上记录显示趋势</div>';
+            }
+        }
+
+        // --- 导出会议摘要（Markdown）---
+        function exportMeetingSummary() {
+            if (meetings.length === 0) { alert('暂无会议记录'); return; }
+            const now = new Date().toLocaleDateString('zh-CN');
+            let md = `# 会议效果评估报告\n\n**生成日期：** ${now}\n**会议总数：** ${meetings.length}\n**低效会议：** ${meetings.filter(m => m.isLowEff).length}\n\n---\n\n`;
+
+            meetings.slice(0, 20).forEach((m, i) => {
+                md += `## ${i+1}. ${m.title}\n`;
+                md += `- **日期：** ${m.date}\n`;
+                md += `- **类型：** ${m.type} | **团队：** ${m.team||'未指定'}\n`;
+                md += `- **评分：** ${m.totalScore}/100 | **ROI：** ${m.roi}%\n`;
+                md += `- **决策项：** ${m.decisions || '无'}\n`;
+                md += `- **行动项：** ${m.actions || '无'}\n`;
+                md += `- **待办人：** ${m.assignees || '无'}\n`;
+                md += `- **备注：** ${m.note || '无'}\n\n`;
+            });
+
+            md += `---\n> 由会议效果评估器自动生成\n`;
+
+            copyToClipboard(md);
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `会议效果报告_${new Date().toISOString().slice(0, 10)}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('报告已复制并下载');
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast') || (() => {
+                const t = document.createElement('div');
+                t.id = 'toast';
+                t.className = 'fixed bottom-6 right-6 bg-gray-800 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium z-50 transition-all duration-300';
+                document.body.appendChild(t);
+                return t;
+            })();
+            el.textContent = msg; el.classList.remove('hidden', 'opacity-0'); el.classList.add('opacity-100');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => { el.classList.add('opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); }, 2500);
+        }
+
+        function loadTemplate(key) { document.getElementById('meetTemplate').value = key; applyTemplate(); showTab('add'); }
+        function deleteMeeting(id) { meetings = meetings.filter(m => m.id !== id); save(); renderHistory(); }
+        function clearHistory() { if (confirm('确定清空所有会议记录？')) { meetings = []; save(); renderHistory(); } }
+
+        // 初始化
+        document.getElementById('meetDate').value = new Date().toISOString().slice(0, 10);
+        Object.keys(curScores).forEach(dim => setScore(dim, curScores[dim]));
+
+        // ========== 团队会议排行榜 ==========
+        function renderRanking() {
+            const list = document.getElementById('rankingList');
+            const teams = [...new Set(meetings.filter(m => m.team && m.team !== '未指定').map(m => m.team))];
+            if (teams.length < 2) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-10">需要至少2个团队有会议记录才能生成排行榜</div>';
+                return;
+            }
+
+            const teamStats = teams.map(team => {
+                const teamMeetings = meetings.filter(m => m.team === team);
+                if (teamMeetings.length < 3) return null;
+                const avgScore = teamMeetings.reduce((s, m) => s + m.totalScore, 0) / teamMeetings.length;
+                const avgDecision = teamMeetings.reduce((s, m) => s + (m.scores?.decision || 3), 0) / teamMeetings.length;
+                const avgTime = teamMeetings.reduce((s, m) => s + (m.scores?.time || 3), 0) / teamMeetings.length;
+                const avgParticipation = teamMeetings.reduce((s, m) => s + (m.scores?.participation || 3), 0) / teamMeetings.length;
+                const avgAction = teamMeetings.reduce((s, m) => s + (m.scores?.action || 3), 0) / teamMeetings.length;
+                const efficiencyIndex = Math.round((avgDecision * 0.25 + avgTime * 0.25 + avgParticipation * 0.25 + avgAction * 0.25) * 20);
+                const lowEffCount = teamMeetings.filter(m => m.isLowEff).length;
+                const recentTrend = teamMeetings.length >= 3 ? (teamMeetings.slice(0, 3).reduce((s, m) => s + m.totalScore, 0) / 3) : avgScore;
+                const earlierTrend = teamMeetings.length >= 6 ? (teamMeetings.slice(-3).reduce((s, m) => s + m.totalScore, 0) / 3) : avgScore;
+                const trend = recentTrend - earlierTrend;
+
+                return { team, count: teamMeetings.length, avgScore: Math.round(avgScore), efficiencyIndex, lowEffCount, trend: Math.round(trend) };
+            }).filter(Boolean);
+
+            if (teamStats.length < 2) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-10">需要至少2个团队有3次以上会议记录</div>';
+                return;
+            }
+
+            teamStats.sort((a, b) => b.efficiencyIndex - a.efficiencyIndex);
+            const maxEff = Math.max(...teamStats.map(t => t.efficiencyIndex));
+
+            const medals = ['bg-yellow-400', 'bg-gray-300', 'bg-amber-600'];
+            const trophyIcons = ['fa-trophy', 'fa-trophy', 'fa-trophy'];
+
+            list.innerHTML = teamStats.map((t, i) => `
+                <div class="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-md transition ${i === 0 ? 'ring-2 ring-yellow-400 bg-yellow-50/50' : ''}">
+                    <div class="w-10 text-center">
+                        ${i < 3 ? `<i class="fa ${trophyIcons[i]} text-2xl ${medals[i]} text-white rounded-full p-1.5"></i>` : `<span class="text-lg font-bold text-gray-400">${i + 1}</span>`}
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800">${t.team}</div>
+                        <div class="text-xs text-gray-500">${t.count}次会议 | 低效${t.lowEffCount}次</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold ${t.efficiencyIndex >= 70 ? 'text-green-600' : t.efficiencyIndex >= 55 ? 'text-orange-600' : 'text-red-600'}">${t.efficiencyIndex}</div>
+                        <div class="text-xs text-gray-500">效率指数</div>
+                    </div>
+                    <div class="w-24">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full ${t.efficiencyIndex >= 70 ? 'bg-green-500' : t.efficiencyIndex >= 55 ? 'bg-orange-500' : 'bg-red-500'}" style="width:${(t.efficiencyIndex / maxEff) * 100}%"></div>
+                        </div>
+                        <div class="text-xs mt-1 ${t.trend >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            <i class="fa ${t.trend >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${Math.abs(t.trend)}分
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // 团队分布图
+            renderTeamDistributionChart(teamStats);
+        }
+
+        function renderTeamDistributionChart(teamStats) {
+            const chart = document.getElementById('teamDistributionChart');
+            const w = 600, h = 160, pad = 20;
+            const bars = teamStats.filter(t => t.count >= 3).slice(0, 8);
+
+            if (bars.length === 0) {
+                chart.innerHTML = '<div class="text-center text-gray-400 py-10">暂无数据</div>';
+                return;
+            }
+
+            const barW = Math.min(50, (w - 2 * pad) / bars.length - 6);
+            const maxVal = Math.max(100, ...bars.map(b => b.efficiencyIndex));
+
+            const barHtml = bars.map((b, i) => {
+                const x = pad + i * (barW + 8);
+                const hPct = (b.efficiencyIndex / maxVal) * (h - 2 * pad - 20);
+                const y = h - pad - 20 - hPct;
+                const color = b.efficiencyIndex >= 70 ? '#22c55e' : b.efficiencyIndex >= 55 ? '#f59e0b' : '#ef4444';
+                return `
+                    <rect x="${x}" y="${y}" width="${barW}" height="${hPct}" rx="3" fill="${color}" opacity="0.8"/>
+                    <text x="${x + barW / 2}" y="${h - 5}" text-anchor="middle" fill="#64748b" font-size="9">${b.team.length > 4 ? b.team.slice(0, 4) + '..' : b.team}</text>
+                    <text x="${x + barW / 2}" y="${y - 4}" text-anchor="middle" fill="#64748b" font-size="10" font-weight="bold">${b.efficiencyIndex}</text>
+                `;
+            }).join('');
+
+            chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" class="w-full h-full"><line x1="${pad}" y1="${h - pad - 20}" x2="${w - pad}" y2="${h - pad - 20}" stroke="#e2e8f0" stroke-width="1"/>${barHtml}</svg>`;
+        }
+
+        // ========== 改进知识库 ==========
+        const KNOWLEDGE_BASE = {
+            decision: {
+                title: '决策产出不足',
+                icon: 'fa-check-circle',
+                color: 'blue',
+                solutions: [
+                    { name: 'RACI决策矩阵', desc: '为每个议题明确 Responsible（执行者）、Accountable（决策者）、Consulted（咨询者）、Informed（被告知者）角色，确保每个决策都有明确的拍板人。', steps: ['列出所有决策项', '为每项分配 R/A/C/I 角色', '决策者需在会议中做最终裁决', '记录决策结果和理由'] },
+                    { name: '决策时间盒', desc: '为每个议题设置最大讨论时间（建议10-15分钟），时间到必须做出初步决定或推迟到下次。', steps: ['会议前为每个议题分配时间', '使用计时器严格计时', '时间到后投票决定', '未完成的议题优先列入下次议程'] },
+                    { name: '事前验尸', desc: '在做出决策前，假设方案已失败并要求参会者找出可能的原因，帮助发现潜在问题。', steps: ['提出决策方案', '假设方案已经失败', '每人列出3个失败原因', '汇总分析并调整方案'] }
+                ]
+            },
+            time: {
+                title: '时间利用率低',
+                icon: 'fa-clock-o',
+                color: 'amber',
+                solutions: [
+                    { name: '站立会议法', desc: '采用站立形式开会，建议时长15-25分钟，适用于日常工作同步会议。', steps: ['通知全员站立开会', '每人用1-2分钟同步进展', '问题单独记录会后讨论', '严格控制总时间'] },
+                    { name: '番茄会议法', desc: '将会议拆分为25分钟讨论 + 5分钟休息的番茄钟节奏，提高专注度。', steps: ['会议前准备议题清单', '设置25分钟番茄钟', '一个番茄钟只讨论一个议题', '休息5分钟后进入下一个'] },
+                    { name: '异步前置输入', desc: '会前将所有材料通过文档形式共享，会议中只讨论决策而不读材料。', steps: ['会前3天发送阅读材料', '要求参会者提前阅读并提交问题', '会上只讨论有争议的问题', '会议记录仅记录决策和待办'] }
+                ]
+            },
+            participation: {
+                title: '参与度不高',
+                icon: 'fa-users',
+                color: 'green',
+                solutions: [
+                    { name: '轮流发言制', desc: '要求每位参会者按顺序发言，确保每个人都有表达机会，避免被少数人主导。', steps: ['会议开始时确定发言顺序', '每人有固定发言时间', '鼓励不同意见表达', '对沉默者点名邀请发言'] },
+                    { name: '互动工具辅助', desc: '使用在线投票、白板协作、实时文档等工具提升参与感和互动性。', steps: ['准备在线协作工具', '关键决策用匿名投票', '使用白板进行头脑风暴', '实时文档记录讨论过程'] },
+                    { name: '角色分配法', desc: '为参会者分配具体角色（计时员、记录员、 devil's advocate 等），让每个人都有职责。', steps: ['确定本次会议角色清单', '会前分配角色', '角色在会议中履行职责', '轮换角色确保公平'] }
+                ]
+            },
+            action: {
+                title: '行动项不明确',
+                icon: 'fa-tasks',
+                color: 'purple',
+                solutions: [
+                    { name: 'SMART待办法', desc: '每个行动项必须符合SMART原则：具体、可衡量、可达成、相关、有时限。', steps: ['每个待办指定单一负责人', '明确交付物标准', '设定具体截止日期', '下次会议检查完成情况'] },
+                    { name: '会末3分钟回顾', desc: '会议结束前预留3分钟，逐条确认所有待办事项并重复确认。', steps: ['预留最后3分钟', '主持人逐条念出待办', '负责人当场确认', '记录到会议纪要中'] },
+                    { name: '自动跟进系统', desc: '会后自动发送待办清单到每位负责人的邮箱/消息，并设置到期提醒。', steps: ['会后整理待办清单', '发送给每位负责人', '设置中期检查点', '到期前提醒'] }
+                ]
+            },
+            roi: {
+                title: 'ROI为负',
+                icon: 'fa-calculator',
+                color: 'red',
+                solutions: [
+                    { name: '会议必要性评估', desc: '每次会议前评估是否必须同步进行，可考虑用异步沟通替代。', steps: ['问自己：不开会能否解决问题', '评估参会人员总成本（人数 × 时长 × 时薪）', '预计收益是否超过成本', '选择替代方案：文档/消息/邮件'] },
+                    { name: '会议合并与精简', desc: '合并多个短会为一次高效会议，精简参会人员至最小必要范围。', steps: ['统计每周会议总数', '识别可合并的会议', '砍掉不必要环节', '控制参会人数在8人以内'] },
+                    { name: '会议价值回溯', desc: '定期评估会议的实际产出价值，建立会议健康度指标。', steps: ['每月回顾所有会议', '统计决策数量和落地率', '计算会议总成本', '输出优化建议'] }
+                ]
+            }
+        };
+
+        let knowledgeCategory = 'all';
+
+        function showKnowledgeCategory(cat) {
+            knowledgeCategory = cat;
+            document.querySelectorAll('#tab-knowledge .flex-wrap button').forEach(btn => {
+                btn.className = btn.textContent.trim() === '全部方案' ? 'px-4 py-2 bg-violet-600 text-white rounded-lg text-sm' :
+                    btn.className = 'px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200';
+            });
+            if (cat === 'all') {
+                document.querySelector('#tab-knowledge .flex-wrap button:first-child').className = 'px-4 py-2 bg-violet-600 text-white rounded-lg text-sm';
+            }
+            renderKnowledgeBase();
+        }
+
+        function renderKnowledgeBase() {
+            const list = document.getElementById('knowledgeList');
+            const categories = knowledgeCategory === 'all' ? Object.keys(KNOWLEDGE_BASE) : [knowledgeCategory];
+
+            if (categories.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8">暂无相关方案</div>';
+                return;
+            }
+
+            const colorMap = { blue: 'bg-blue-50 border-blue-300 text-blue-700', amber: 'bg-amber-50 border-amber-300 text-amber-700', green: 'bg-green-50 border-green-300 text-green-700', purple: 'bg-purple-50 border-purple-300 text-purple-700', red: 'bg-red-50 border-red-300 text-red-700' };
+
+            list.innerHTML = categories.map(catKey => {
+                const cat = KNOWLEDGE_BASE[catKey];
+                if (!cat) return '';
+                return `
+                    <div class="border rounded-xl overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 flex items-center gap-2">
+                            <i class="fa ${cat.icon} text-${cat.color}-600"></i>
+                            <h4 class="font-bold text-gray-800">${cat.title}</h4>
+                            <span class="text-xs text-gray-500">${cat.solutions.length} 个解决方案</span>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            ${cat.solutions.map(s => `
+                                <div class="${colorMap[cat.color]} border rounded-lg p-4">
+                                    <h5 class="font-semibold">${s.name}</h5>
+                                    <p class="text-sm mt-1 text-gray-600">${s.desc}</p>
+                                    <div class="mt-2">
+                                        <span class="text-xs font-medium text-gray-500">实施步骤：</span>
+                                        <ol class="list-decimal list-inside text-sm text-gray-600 mt-1 space-y-0.5">
+                                            ${s.steps.map(step => `<li>${step}</li>`).join('')}
+                                        </ol>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
